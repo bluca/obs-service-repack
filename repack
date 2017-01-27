@@ -15,11 +15,12 @@ use warnings;
 
 use File::Temp qw/ tempdir /;
 use File::Path qw(make_path);
+use File::Copy qw(move copy);
 
 sub usage()
 {
     my $text = <<'END';
-Usage: repack --outdir $OUTDIR --oldfile $OLDFILE --newname $NEWNAME --newextension $NEWEXTENSION
+Usage: repack --outdir $OUTDIR --oldfile $OLDFILE --newname $NEWNAME --newextension $NEWEXTENSION --linux-flavours $NEWFLAVOUR
 END
     print $text;
     exit;
@@ -86,6 +87,10 @@ while (@ARGV) {
      } elsif ($ARGV[0] eq '--variantid') {
          shift @ARGV;
          $opt{variantid} = shift @ARGV;
+         next;
+     } elsif ($ARGV[0] eq '--linux-flavours') {
+         shift @ARGV;
+         $opt{linuxflavours} = shift @ARGV;
          next;
     } else {
         die("Unknown argument $ARGV[0]!");
@@ -154,6 +159,22 @@ if (-e "$config_file") {
     }
 
     close($fh);
+
+    if (exists $opt{linuxflavours}) {
+        open my $in, '<', $config_file or die "Unable to open $config_file ($!)";
+        open my $out, '>', "$config_file.new" or die "Unable to open $config_file.new ($!)";
+
+        while( <$in> ) {
+            s/--linux-flavours .*\\/--linux-flavours \"$opt{linuxflavours}\" \\/g;
+            print $out $_;
+        }
+
+        close $in;
+        close $out;
+
+        copy("$config_file.new", $config_file) or die "The move operation failed: $!";
+        unlink "$config_file.new";
+    }
 }
 
 system("tar -C $tmpdir -cf $opt{outdir}/$opt{newname}.$opt{newextension} $opt{newname}");

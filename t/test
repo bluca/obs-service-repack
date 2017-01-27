@@ -13,7 +13,7 @@ EXT="livebuild"
 OLDFILE="$OLDNAME.$EXT"
 NEWFILE="$NEWNAME.$EXT"
 
-TESTS=(test_basic test_with test_without test_with_and_without test_variant test_variantid test_variant_and_variantid)
+TESTS=(test_basic test_with test_without test_with_and_without test_variant test_variantid test_variant_and_variantid test_linux_flavours)
 
 FAILED=()
 
@@ -24,6 +24,9 @@ function setup {
   echo test-package > $TMP_DIR/$OLDNAME/config/package-lists/enabled.list.chroot
   echo test-package > $TMP_DIR/$OLDNAME/config/package-lists/disabled
   echo some-livebuild-config > $TMP_DIR/$OLDNAME/auto/config
+  echo 'lb config noauto \' >> $TMP_DIR/$OLDNAME/auto/config
+  echo '    --linux-flavours "old-one" \' >> $TMP_DIR/$OLDNAME/auto/config
+  echo '    "${@}"' >> $TMP_DIR/$OLDNAME/auto/config
   touch $TMP_DIR/$OLDNAME/{a..c}
   tar -C $TMP_DIR -cf $TMP_DIR/$OLDFILE $OLDNAME
 }
@@ -57,6 +60,17 @@ function contents_config_identical {
 function verify_config_state {
   new_file=$(tar -xvf $TMP_DIR/$NEWFILE -O $NEWNAME/auto/config)
   contains_field=$(echo $new_file | grep "$1\=\"$2\"")
+
+  if [ -n "$contains_field" ]; then
+    RESULT=1
+  else
+    RESULT=0
+  fi
+}
+
+function verify_flavours_state {
+  new_file=$(tar -xvf $TMP_DIR/$NEWFILE -O $NEWNAME/auto/config)
+  contains_field=$(echo $new_file | grep "$1 \"$2\"")
 
   if [ -n "$contains_field" ]; then
     RESULT=1
@@ -167,6 +181,16 @@ function test_variant_and_variantid {
 
   verify_config_state VARIANT_ID VARIANT_ID-NAME
   check_result 1 "$test : VARIANT_ID=\"VARIANT_ID-NAME\" should be present"
+}
+
+function test_linux_flavours {
+  (cd $TMP_DIR && $PARENTDIR/repack --outdir $TMP_DIR --oldfile $OLDFILE --newname $NEWNAME --newextension $EXT --linux-flavours "new-one")
+
+  contents_config_identical $TMP_DIR/$OLDFILE $TMP_DIR/$NEWFILE
+  check_result 0 "$test : contents should differ"
+
+  verify_flavours_state '\-\-linux-flavours' 'new-one'
+  check_result 1 "$test : --linux-flavours \"new-one\" \ should be present"
 }
 
 function summary {

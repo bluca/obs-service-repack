@@ -25,4 +25,7 @@
     <parameter name="variantid">
         <description>A lower-case string (no spaces or other characters outside of 0–9, a–z, ".", "_" and "-"), identifying a specific variant or edition of the operating system.</description>
     </parameter>
+    <parameter name="linux-flavours">
+        <description>A string identifying the linux kernel flavour to use for the build.</description>
+    </parameter>
 </service>
